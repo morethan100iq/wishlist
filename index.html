@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Вишлист</title>
+<meta name="description" content="Личный вишлист: ссылка, цена и картинка подтягиваются сами.">
+<meta name="theme-color" content="#f4f9e9">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23ff4d1c'/><path d='M9 12h14M9 17h10M9 22h6' stroke='%23fff8e7' stroke-width='2.6' stroke-linecap='round'/></svg>">
+<style>
+  :root{
+    /* база — из твоей палитры */
+    --paper:#f4f9e9;
+    --ink:#14303f;
+    --ink-2:#284b63;
+    --ash:#b4b8ab;
+
+    /* рабочие цвета: каждый что-то значит */
+    --flame:#ff4d1c;   /* действие и упавшая цена */
+    --sun:#ffc93c;     /* очень хочу */
+    --grass:#22a06b;   /* куплено */
+
+    --white:#ffffff;
+    --soft:#6b8494;
+    --line:#14303f;
+    --hair:rgba(20,48,63,.14);
+
+    --r:16px;
+    --r-lg:26px;
+    --pop:4px 4px 0 var(--ink);
+    --pop-lg:7px 7px 0 var(--ink);
+
+    --display:'Unbounded',system-ui,sans-serif;
+    --body:'Onest',system-ui,-apple-system,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background-color:var(--paper);
+    background-image:
+      radial-gradient(760px 420px at 88% -8%, rgba(255,201,60,.38), transparent 60%),
+      radial-gradient(620px 400px at 4% 6%, rgba(255,77,28,.14), transparent 62%),
+      radial-gradient(rgba(20,48,63,.09) 1px, transparent 1px);
+    background-size:auto,auto,22px 22px;
+    background-attachment:fixed;
+    color:var(--ink);
+    font-family:var(--body);
+    font-size:15px;line-height:1.5;min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit}
+  button,input,select,textarea{font:inherit;color:inherit}
+  ::selection{background:var(--sun);color:var(--ink)}
+  :focus-visible{outline:3px solid var(--flame);outline-offset:2px;border-radius:6px}
+
+  .wrap{max-width:1140px;margin:0 auto;padding:22px 20px 90px}
+
+  /* ---------- шапка ---------- */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:30px;flex-wrap:wrap}
+  .brand{
+    font-family:var(--display);font-weight:900;font-size:14px;letter-spacing:.02em;
+    background:var(--sun);border:2px solid var(--ink);border-radius:999px;
+    padding:7px 17px;box-shadow:var(--pop);transform:rotate(-1.4deg);
+  }
+  .top-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+  .btn{
+    background:var(--white);border:2px solid var(--ink);border-radius:999px;
+    padding:8px 16px;cursor:pointer;font-size:13.5px;font-weight:500;white-space:nowrap;
+    box-shadow:2px 2px 0 var(--ink);transition:transform .12s ease,box-shadow .12s ease,background .15s ease;
+  }
+  .btn:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--ink)}
+  .btn:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink)}
+  .btn-solid{background:var(--flame);color:var(--white);font-weight:600}
+  .btn-solid:hover{background:#ff6236}
+  .btn:disabled{opacity:.5;cursor:default;transform:none;box-shadow:2px 2px 0 var(--ink)}
+
+  /* ---------- ценник ---------- */
+  .tag{
+    position:relative;background:var(--white);border:2.5px solid var(--ink);border-radius:var(--r-lg);
+    padding:30px 30px 24px;box-shadow:var(--pop-lg);
+  }
+  .tag::before{ /* дырка ценника */
+    content:"";position:absolute;top:26px;right:26px;width:16px;height:16px;
+    border:2.5px solid var(--ink);border-radius:50%;background:var(--paper);
+  }
+  .eyebrow{
+    font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--flame);margin-bottom:14px;
+  }
+  .total{
+    font-family:var(--display);font-weight:900;letter-spacing:-.05em;line-height:.88;
+    font-size:clamp(50px,12vw,108px);font-variant-numeric:tabular-nums;
+    display:flex;align-items:baseline;gap:.1em;flex-wrap:wrap;
+  }
+  .total .cur{font-size:.34em;color:var(--flame);letter-spacing:-.02em}
+
+  .stats{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}
+  .stat{
+    border:2px solid var(--ink);border-radius:999px;padding:5px 13px;font-size:13px;background:var(--paper);
+  }
+  .stat b{font-weight:700}
+  .stat.win{background:var(--grass);color:var(--white);border-color:var(--grass)}
+
+  .adder{
+    margin-top:22px;padding-top:22px;border-top:2px dashed var(--hair);
+    display:flex;gap:10px;align-items:center;
+  }
+  .adder input{
+    flex:1;min-width:0;background:var(--paper);border:2px solid var(--ink);border-radius:14px;
+    padding:13px 15px;outline:none;font-family:var(--mono);font-size:13.5px;
+  }
+  .adder input:focus{background:var(--white);box-shadow:inset 0 0 0 2px rgba(255,77,28,.25)}
+  .adder input::placeholder{color:var(--soft);font-family:var(--body);font-size:14px}
+  .adder .btn{padding:13px 24px}
+
+  .hint{margin-top:12px;font-size:13px;color:var(--soft);min-height:18px;font-weight:500}
+  .hint.err{color:var(--flame)}
+
+  /* ---------- панель ---------- */
+  .bar{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:34px 0 20px;flex-wrap:wrap}
+  .chips{display:flex;gap:7px}
+  .chip{
+    background:var(--white);border:2px solid var(--ink);border-radius:999px;padding:7px 15px;
+    cursor:pointer;font-size:13.5px;font-weight:500;transition:.14s ease;
+  }
+  .chip:hover{background:var(--sun)}
+  .chip[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  .chip .n{font-family:var(--mono);font-size:11.5px;opacity:.65;margin-left:6px}
+  select.sort{
+    background:var(--white);border:2px solid var(--ink);border-radius:999px;padding:8px 13px;
+    font-size:13.5px;font-weight:500;cursor:pointer;
+  }
+
+  /* ---------- сетка ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px}
+
+  .card{
+    position:relative;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--white);border:2.5px solid var(--ink);border-radius:var(--r-lg);
+    box-shadow:var(--pop);animation:pop .28s cubic-bezier(.2,1.4,.4,1) both;
+    transition:transform .16s ease,box-shadow .16s ease;
+  }
+  @keyframes pop{from{opacity:0;transform:scale(.94) translateY(8px)}to{opacity:1;transform:none}}
+  .card:hover{transform:translate(-3px,-3px);box-shadow:var(--pop-lg)}
+  .card::before{content:"";position:absolute;top:0;left:0;right:0;height:7px;background:var(--ash);z-index:2}
+  .card.p2::before{background:var(--sun)}
+  .card.p1::before{background:var(--ink-2)}
+  .card.bought::before{background:var(--grass)}
+  .card.bought{opacity:.62}
+  .card.bought .title{text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:var(--grass)}
+  .card.busy .thumb::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(100deg,transparent 20%,rgba(255,201,60,.55) 50%,transparent 80%);
+    background-size:220% 100%;animation:sweep 1.1s linear infinite;
+  }
+  @keyframes sweep{from{background-position:180% 0}to{background-position:-80% 0}}
+
+  .thumb{
+    position:relative;aspect-ratio:5/4;background:var(--paper);border-bottom:2.5px solid var(--ink);
+    display:flex;align-items:center;justify-content:center;overflow:hidden;margin-top:7px;
+  }
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb .letter{font-family:var(--display);font-weight:900;font-size:44px;color:rgba(20,48,63,.16)}
+  .flag{
+    position:absolute;top:11px;left:11px;z-index:2;
+    font-family:var(--mono);font-weight:700;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;
+    padding:5px 10px;border-radius:999px;border:2px solid var(--ink);background:var(--white);
+  }
+  .flag.drop{background:var(--flame);color:var(--white);border-color:var(--ink);animation:wiggle .5s ease}
+  .flag.done{background:var(--grass);color:var(--white)}
+  @keyframes wiggle{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg) scale(1.05)}}
+
+  .body{padding:15px 16px 14px;display:flex;flex-direction:column;gap:8px;flex:1}
+  .shop{font-family:var(--mono);font-weight:500;font-size:11px;color:var(--soft);letter-spacing:.03em}
+  .title{margin:0;font-size:14.5px;font-weight:600;line-height:1.32}
+  .title a{text-decoration:none}
+  .title a:hover{background:var(--sun);box-shadow:0 0 0 3px var(--sun)}
+  .note{font-size:12.5px;color:var(--soft);margin:0}
+  .price{
+    margin-top:auto;padding-top:8px;font-family:var(--display);font-weight:700;font-size:20px;
+    letter-spacing:-.03em;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+  }
+  .price.down{color:var(--flame)}
+  .price .old{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--soft);text-decoration:line-through}
+  .price .none{font-family:var(--body);font-size:13.5px;font-weight:500;color:var(--soft)}
+
+  .acts{display:flex;gap:3px;margin-top:11px;padding-top:11px;border-top:2px dashed var(--hair);flex-wrap:wrap}
+  .ico{
+    background:none;border:0;padding:6px 10px;border-radius:9px;cursor:pointer;color:var(--soft);
+    font-size:12.5px;font-weight:600;transition:.12s ease;
+  }
+  .ico:hover{background:var(--sun);color:var(--ink)}
+  .ico.danger:hover{background:var(--flame);color:var(--white)}
+
+  /* ---------- пусто ---------- */
+  .empty{
+    grid-column:1/-1;border:3px dashed var(--hair);border-radius:var(--r-lg);
+    padding:54px 26px;text-align:center;color:var(--soft);background:rgba(255,255,255,.5);
+  }
+  .empty b{display:block;color:var(--ink);font-family:var(--display);font-weight:700;font-size:18px;margin-bottom:9px;letter-spacing:-.02em}
+
+  /* ---------- диалоги ---------- */
+  dialog{
+    border:3px solid var(--ink);border-radius:var(--r-lg);background:var(--white);color:var(--ink);
+    padding:0;width:min(470px,calc(100vw - 28px));box-shadow:9px 9px 0 var(--ink);
+  }
+  dialog::backdrop{background:rgba(20,48,63,.42);backdrop-filter:blur(2px)}
+  .dlg-head{padding:20px 22px 0;font-family:var(--display);font-weight:700;letter-spacing:-.02em;font-size:18px}
+  .dlg-body{padding:18px 22px;display:grid;gap:13px}
+  .dlg-foot{padding:0 22px 20px;display:flex;justify-content:flex-end;gap:8px}
+  label{display:grid;gap:6px;font-size:11.5px;font-weight:600;color:var(--soft);text-transform:uppercase;letter-spacing:.08em}
+  .in{
+    background:var(--paper);border:2px solid var(--ink);border-radius:12px;padding:11px 13px;
+    outline:none;font-size:14px;font-weight:500;width:100%;text-transform:none;letter-spacing:normal;color:var(--ink);
+  }
+  .in:focus{background:var(--white);box-shadow:inset 0 0 0 2px rgba(255,77,28,.25)}
+  textarea.in{resize:vertical;min-height:62px;font-family:var(--body)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .tip{font-size:12px;color:var(--soft);line-height:1.5;font-weight:500}
+
+  /* ---------- уведомление ---------- */
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,22px);
+    background:var(--ink);color:var(--paper);padding:12px 22px;border-radius:999px;
+    font-size:13.5px;font-weight:600;opacity:0;pointer-events:none;transition:.2s ease;z-index:60;
+    box-shadow:var(--pop);border:2px solid var(--ink);
+  }
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+  .banner{
+    display:none;margin-bottom:20px;padding:14px 18px;border-radius:var(--r);
+    background:var(--sun);border:2.5px solid var(--ink);box-shadow:var(--pop);font-size:13.5px;font-weight:500;
+    align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  }
+  .banner.on{display:flex}
+
+  footer{margin-top:54px;padding-top:18px;border-top:2px dashed var(--hair);color:var(--soft);font-size:12.5px;font-weight:500}
+
+  @media (max-width:560px){
+    .wrap{padding:18px 15px 70px}
+    .tag{padding:24px 20px 20px;border-radius:20px}
+    .tag::before{display:none}
+    .adder{flex-direction:column;align-items:stretch}
+    .adder .btn{width:100%}
+    .two{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">ВИШЛИСТ</div>
+    <div class="top-actions">
+      <button class="btn" id="btn-refresh">Обновить цены</button>
+      <button class="btn" id="btn-share">Поделиться</button>
+      <button class="btn" id="btn-menu">Ещё</button>
+    </div>
+  </header>
+
+  <div class="banner" id="banner">
+    <span id="banner-text"></span>
+    <span style="display:flex;gap:8px">
+      <button class="btn btn-solid" id="banner-import">Забрать себе</button>
+      <button class="btn" id="banner-close">Закрыть</button>
+    </span>
+  </div>
+
+  <section class="tag">
+    <div class="eyebrow">Сколько стоит хотеть</div>
+    <div class="total"><span id="total">0</span><span class="cur" id="cur-label">₽</span></div>
+
+    <div class="stats">
+      <span class="stat"><b id="c-open">0</b> в списке</span>
+      <span class="stat"><b id="c-bought">0</b> куплено</span>
+      <span class="stat win" id="c-saved">поймано скидок на 0 ₽</span>
+    </div>
+
+    <div class="adder">
+      <input id="url" type="url" inputmode="url" placeholder="Вставь ссылку на товар — название, картинку и цену подтяну сам" autocomplete="off" spellcheck="false">
+      <button class="btn btn-solid" id="btn-add">Добавить</button>
+      <button class="btn" id="btn-manual">Вручную</button>
+    </div>
+    <div class="hint" id="hint"></div>
+  </section>
+
+  <div class="bar">
+    <div class="chips">
+      <button class="chip" data-filter="all" aria-pressed="true">Всё <span class="n" id="n-all">0</span></button>
+      <button class="chip" data-filter="open" aria-pressed="false">Хочу <span class="n" id="n-open">0</span></button>
+      <button class="chip" data-filter="bought" aria-pressed="false">Куплено <span class="n" id="n-bought">0</span></button>
+    </div>
+    <select class="sort" id="sort">
+      <option value="new">Сначала новые</option>
+      <option value="expensive">Сначала дорогие</option>
+      <option value="cheap">Сначала дешёвые</option>
+      <option value="priority">По приоритету</option>
+      <option value="name">По названию</option>
+    </select>
+  </div>
+
+  <main class="grid" id="grid"></main>
+
+  <footer>
+    Жёлтая полоска — очень хочу, синяя — хочу, серая — когда-нибудь, зелёная — уже куплено.
+    Данные лежат только в этом браузере: меняешь устройство — сначала скачай JSON.
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<dialog id="dlg">
+  <form method="dialog">
+    <div class="dlg-head" id="dlg-title">Новое желание</div>
+    <div class="dlg-body">
+      <label>Название<input class="in" id="f-title" required></label>
+      <div class="two">
+        <label>Цена<input class="in" id="f-price" inputmode="decimal" placeholder="12990"></label>
+        <label>Приоритет
+          <select class="in" id="f-priority">
+            <option value="2">Очень хочу</option>
+            <option value="1" selected>Хочу</option>
+            <option value="0">Когда-нибудь</option>
+          </select>
+        </label>
+      </div>
+      <label>Ссылка<input class="in" id="f-url" type="url" placeholder="https://"></label>
+      <label>Картинка<input class="in" id="f-image" type="url" placeholder="https://"></label>
+      <label>Заметка<textarea class="in" id="f-note" placeholder="Размер, цвет, где дешевле"></textarea></label>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn" value="cancel">Отмена</button>
+      <button class="btn btn-solid" id="f-save" value="save">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg2">
+  <form method="dialog">
+    <div class="dlg-head">Ещё</div>
+    <div class="dlg-body">
+      <label>Валюта<input class="in" id="s-cur" maxlength="4" placeholder="₽"></label>
+      <label>Свой сервис цен
+        <input class="in" id="s-api" type="url" placeholder="https://твой-проект.vercel.app/api/price">
+      </label>
+      <div class="tip">
+        Без него цены читаются через публичные прокси — иногда магазин их блокирует.
+        Свой эндпоинт на Vercel работает стабильнее, файл лежит в проекте.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        <button class="btn" id="s-export" value="export" formnovalidate>Скачать JSON</button>
+        <button class="btn" id="s-import" value="import" formnovalidate>Загрузить JSON</button>
+        <button class="btn" id="s-clear" value="clear" formnovalidate>Очистить всё</button>
+      </div>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn btn-solid" value="save">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<input type="file" id="file" accept="application/json" hidden>
+
+<script>
+/* ============================================================
+   Хранилище: window.storage внутри Claude, localStorage на хостинге
+   ============================================================ */
+const KEY_ITEMS = 'wishlist:items';
+const KEY_SET   = 'wishlist:settings';
+const hasWS = typeof window.storage !== 'undefined' && window.storage;
+
+const store = {
+  async get(key, fallback){
+    try{
+      if(hasWS){ const r = await window.storage.get(key); return r ? JSON.parse(r.value) : fallback; }
+      const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback;
+    }catch(e){ return fallback; }
+  },
+  async set(key, value){
+    try{
+      const s = JSON.stringify(value);
+      if(hasWS){ await window.storage.set(key, s); return; }
+      localStorage.setItem(key, s);
+    }catch(e){ toast('Не получилось сохранить'); }
+  }
+};
+
+let items = [];
+let settings = { currency:'₽', api:'' };
+let filter = 'all';
+let sortBy = 'new';
+let readonly = false;
+
+/* ============================================================
+   Утилиты
+   ============================================================ */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const uid = () => Math.random().toString(36).slice(2,10);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => Number(n||0).toLocaleString('ru-RU',{maximumFractionDigits:0});
+
+function host(url){
+  try{ return new URL(url).hostname.replace(/^www\./,''); }catch(e){ return ''; }
+}
+function toNum(v){
+  if(v == null) return null;
+  const s = String(v).replace(/\u00a0/g,' ').replace(/[^\d.,]/g,'').replace(/\s/g,'');
+  if(!s) return null;
+  let t = s;
+  if(t.includes(',') && t.includes('.')) t = t.lastIndexOf(',') > t.lastIndexOf('.') ? t.replace(/\./g,'').replace(',','.') : t.replace(/,/g,'');
+  else if(t.includes(',')) t = /,\d{1,2}$/.test(t) ? t.replace(',','.') : t.replace(/,/g,'');
+  const n = parseFloat(t);
+  return isFinite(n) && n > 0 ? Math.round(n) : null;
+}
+let toastTimer;
+function toast(msg){
+  const el = $('#toast'); el.textContent = msg; el.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>el.classList.remove('on'), 2400);
+}
+function hint(msg, isErr){
+  const el = $('#hint'); el.textContent = msg || ''; el.classList.toggle('err', !!isErr);
+}
+
+/* ============================================================
+   Получение данных о товаре
+   ============================================================ */
+const PROXIES = [
+  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+  u => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
+  u => 'https://r.jina.ai/' + u
+];
+
+async function grab(url, ms = 14000){
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), ms);
+  try{
+    const res = await fetch(url, { signal: ctrl.signal, headers:{ 'Accept':'text/html,*/*' } });
+    if(!res.ok) throw new Error(res.status);
+    return await res.text();
+  } finally { clearTimeout(t); }
+}
+
+function deepFindPrice(obj, depth = 0){
+  if(!obj || depth > 6) return null;
+  if(Array.isArray(obj)){ for(const v of obj){ const r = deepFindPrice(v, depth+1); if(r) return r; } return null; }
+  if(typeof obj === 'object'){
+    for(const k of ['price','lowPrice','highPrice']){
+      if(obj[k] != null && typeof obj[k] !== 'object'){ const n = toNum(obj[k]); if(n) return n; }
+    }
+    for(const v of Object.values(obj)){ const r = deepFindPrice(v, depth+1); if(r) return r; }
+  }
+  return null;
+}
+
+function parseHTML(html, url){
+  const out = { title:null, price:null, image:null };
+  let doc = null;
+  try{ doc = new DOMParser().parseFromString(html, 'text/html'); }catch(e){}
+
+  if(doc){
+    const meta = (...sels)=>{
+      for(const s of sels){
+        const el = doc.querySelector(s);
+        if(!el) continue;
+        const v = el.getAttribute('content') || el.getAttribute('value') || el.textContent;
+        if(v && v.trim()) return v.trim();
+      }
+      return null;
+    };
+    out.title = meta('meta[property="og:title"]','meta[name="twitter:title"]','meta[itemprop="name"]','h1','title');
+    out.image = meta('meta[property="og:image"]','meta[property="og:image:secure_url"]','meta[name="twitter:image"]','link[rel="image_src"]');
+    out.price = toNum(meta(
+      'meta[property="product:price:amount"]','meta[property="og:price:amount"]',
+      'meta[itemprop="price"]','[itemprop="price"]','meta[name="price"]',
+      '[data-price]','[class*="price" i] [class*="value" i]'
+    ));
+    if(!out.price){
+      for(const s of doc.querySelectorAll('script[type="application/ld+json"]')){
+        try{ const p = deepFindPrice(JSON.parse(s.textContent)); if(p){ out.price = p; break; } }catch(e){}
+      }
+    }
+  }
+
+  if(!out.price){
+    const m = html.match(/"(?:price|salePrice|priceU|finalPrice|current_price)"\s*:\s*"?(\d[\d\s.,]*)"?/i);
+    if(m) out.price = toNum(m[1]);
+  }
+  if(!out.price){
+    const m = html.match(/(\d[\d\s\u00a0]{2,12})\s*(?:₽|руб|RUB|р\.)/i);
+    if(m) out.price = toNum(m[1]);
+  }
+  if(!out.title){
+    const m = html.match(/<title[^>]*>([^<]{3,160})<\/title>/i);
+    if(m) out.title = m[1].trim();
+  }
+  if(out.title) out.title = out.title.replace(/\s+/g,' ').replace(/\s*[|—–-]\s*(купить|цена|отзывы)[^|]*$/i,'').slice(0,120);
+  if(out.image && !/^https?:/i.test(out.image)){
+    try{ out.image = new URL(out.image, url).href; }catch(e){ out.image = null; }
+  }
+  return out;
+}
+
+function wbBasket(nm){
+  const vol = Math.floor(nm / 100000);
+  const t = [143,287,431,719,1007,1061,1115,1169,1313,1601,1655,1919,2045,2189,2405,2621];
+  let b = 17; for(let i=0;i<t.length;i++){ if(vol <= t[i]){ b = i+1; break; } }
+  return { b:String(b).padStart(2,'0'), vol, part:Math.floor(nm/1000) };
+}
+async function fromWB(url){
+  const m = url.match(/catalog\/(\d+)/);
+  if(!m) return null;
+  const nm = m[1];
+  const api = `https://card.wb.ru/cards/v2/detail?appType=1&curr=rub&dest=-1257786&spp=30&nm=${nm}`;
+  try{
+    const txt = await grab(api, 9000);
+    const p = JSON.parse(txt)?.data?.products?.[0];
+    if(!p) return null;
+    const kop = p.sizes?.[0]?.price?.product ?? p.sizes?.[0]?.price?.total ?? p.salePriceU ?? p.priceU;
+    const { b, vol, part } = wbBasket(+nm);
+    return {
+      title: [p.brand, p.name].filter(Boolean).join(' · ').slice(0,120),
+      price: kop ? Math.round(kop/100) : null,
+      image: `https://basket-${b}.wbbasket.ru/vol${vol}/part${part}/${nm}/images/big/1.webp`
+    };
+  }catch(e){ return null; }
+}
+
+async function fetchProduct(url){
+  const h = host(url);
+  if(/wildberries\.ru$/.test(h)){
+    const wb = await fromWB(url);
+    if(wb && (wb.price || wb.title)) return wb;
+  }
+  if(settings.api){
+    try{
+      const txt = await grab(settings.api + (settings.api.includes('?') ? '&' : '?') + 'url=' + encodeURIComponent(url), 15000);
+      const j = JSON.parse(txt);
+      if(j && (j.price || j.title)) return { title:j.title||null, price:toNum(j.price), image:j.image||null };
+    }catch(e){}
+  }
+  for(const build of PROXIES){
+    try{
+      const html = await grab(build(url));
+      const r = parseHTML(html, url);
+      if(r.price || r.title) return r;
+    }catch(e){}
+  }
+  return null;
+}
+
+/* ============================================================
+   Действия со списком
+   ============================================================ */
+async function save(){ if(!readonly) await store.set(KEY_ITEMS, items); }
+
+async function addByUrl(url){
+  url = url.trim();
+  if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  try{ new URL(url); }catch(e){ hint('Это не похоже на ссылку', true); return; }
+
+  const item = {
+    id: uid(), url, title: host(url) || 'Новое желание', price: null, image: null,
+    note:'', priority:1, bought:false, created: Date.now(), first: null, checked: null
+  };
+  items.unshift(item);
+  render(); await save();
+  $('#url').value = '';
+  hint('Читаю страницу…');
+  markBusy(item.id, true);
+
+  const data = await fetchProduct(url);
+  const live = items.find(i => i.id === item.id);
+  if(!live) return;
+  if(data){
+    if(data.title) live.title = data.title;
+    if(data.image) live.image = data.image;
+    if(data.price){ live.price = data.price; live.first = data.price; }
+    live.checked = Date.now();
+    hint(data.price ? `Готово: ${fmt(data.price)} ${settings.currency}` : 'Название взял, цену магазин не отдал — впиши руками');
+  }else{
+    hint('Магазин закрылся от парсера. Впиши название и цену руками', true);
+  }
+  render(); await save();
+  if(!data || !data.price) openDialog(live.id);
+}
+
+async function refreshAll(){
+  const list = items.filter(i => !i.bought && i.url);
+  if(!list.length){ toast('Нечего обновлять'); return; }
+  const btn = $('#btn-refresh'); btn.disabled = true; btn.textContent = 'Проверяю…';
+  let changed = 0;
+  for(const it of list){
+    markBusy(it.id, true);
+    const data = await fetchProduct(it.url);
+    markBusy(it.id, false);
+    if(data && data.price){
+      if(it.first == null) it.first = it.price ?? data.price;
+      if(it.price !== data.price) changed++;
+      it.price = data.price;
+      it.checked = Date.now();
+      if(data.image && !it.image) it.image = data.image;
+      render();
+    }
+  }
+  await save();
+  btn.disabled = false; btn.textContent = 'Обновить цены';
+  toast(changed ? `Цены изменились у ${changed} шт.` : 'Всё по-прежнему');
+}
+
+function markBusy(id, on){
+  const el = document.querySelector(`.card[data-id="${id}"]`);
+  if(el) el.classList.toggle('busy', on);
+}
+
+/* ============================================================
+   Отрисовка
+   ============================================================ */
+let shownTotal = 0;
+function animateTotal(to){
+  const el = $('#total');
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){ shownTotal = to; el.textContent = fmt(to); return; }
+  const from = shownTotal, t0 = performance.now(), dur = 520;
+  function step(t){
+    const k = Math.min(1, (t - t0) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    el.textContent = fmt(Math.round(from + (to - from) * e));
+    if(k < 1) requestAnimationFrame(step); else shownTotal = to;
+  }
+  requestAnimationFrame(step);
+}
+
+function sorted(list){
+  const c = [...list];
+  if(sortBy === 'expensive') c.sort((a,b)=>(b.price||0)-(a.price||0));
+  else if(sortBy === 'cheap') c.sort((a,b)=>(a.price ?? 1e12)-(b.price ?? 1e12));
+  else if(sortBy === 'name') c.sort((a,b)=>String(a.title).localeCompare(String(b.title),'ru'));
+  else if(sortBy === 'priority') c.sort((a,b)=>(b.priority??1)-(a.priority??1) || b.created-a.created);
+  else c.sort((a,b)=>b.created-a.created);
+  return c;
+}
+
+function card(it){
+  const drop = it.first && it.price && it.price < it.first ? it.first - it.price : 0;
+  const pr = it.price
+    ? `${fmt(it.price)} <span style="font-size:.62em">${esc(settings.currency)}</span>` +
+      (drop ? ` <span class="old">${fmt(it.first)}</span>` : '')
+    : `<span class="none">цену не нашёл</span>`;
+  const img = it.image
+    ? `<img src="${esc(it.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`
+    : `<span class="letter">${esc((it.title||'?').trim().charAt(0).toUpperCase())}</span>`;
+  const flag = it.bought ? `<span class="flag done">куплено</span>`
+    : drop ? `<span class="flag drop">−${fmt(drop)} ${esc(settings.currency)}</span>`
+    : it.priority === 2 ? `<span class="flag">очень хочу</span>` : '';
+  const titleHtml = it.url
+    ? `<a href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">${esc(it.title)}</a>`
+    : esc(it.title);
+  const cls = ['card', it.bought ? 'bought' : 'p' + (it.priority ?? 1)].join(' ');
+
+  return `
+  <article class="${cls}" data-id="${it.id}">
+    <div class="thumb">${img}${flag}</div>
+    <div class="body">
+      ${it.url ? `<div class="shop">${esc(host(it.url))}</div>` : ''}
+      <h3 class="title">${titleHtml}</h3>
+      ${it.note ? `<p class="note">${esc(it.note)}</p>` : ''}
+      <div class="price${drop ? ' down' : ''}">${pr}</div>
+      ${readonly ? '' : `
+      <div class="acts">
+        <button class="ico" data-act="bought">${it.bought ? 'Вернуть' : 'Куплено'}</button>
+        <button class="ico" data-act="edit">Изменить</button>
+        ${it.url ? `<button class="ico" data-act="refresh">Цена</button>` : ''}
+        <button class="ico danger" data-act="del" style="margin-left:auto">Удалить</button>
+      </div>`}
+    </div>
+  </article>`;
+}
+
+function render(){
+  const open = items.filter(i => !i.bought);
+  const bought = items.filter(i => i.bought);
+  const sum = open.reduce((s,i)=>s+(i.price||0),0);
+  const saved = items.reduce((s,i)=> s + (i.first && i.price && i.price < i.first ? i.first - i.price : 0), 0);
+
+  animateTotal(sum);
+  $('#cur-label').textContent = settings.currency;
+  $('#c-open').textContent = open.length;
+  $('#c-bought').textContent = bought.length;
+  $('#c-saved').textContent = `поймано скидок на ${fmt(saved)} ${settings.currency}`;
+  $('#c-saved').style.display = saved ? '' : 'none';
+  $('#n-all').textContent = items.length;
+  $('#n-open').textContent = open.length;
+  $('#n-bought').textContent = bought.length;
+
+  const list = filter === 'open' ? open : filter === 'bought' ? bought : items;
+  const grid = $('#grid');
+  grid.innerHTML = list.length
+    ? sorted(list).map(card).join('')
+    : `<div class="empty"><b>${items.length ? 'В этой вкладке пусто' : 'Список пока пустой'}</b>
+       ${items.length ? 'Переключись на «Всё»' : 'Скопируй ссылку на товар и вставь её в поле сверху — название, картинку и цену подтяну сам.'}</div>`;
+}
+
+/* ============================================================
+   Диалог товара
+   ============================================================ */
+let editId = null;
+function openDialog(id){
+  editId = id;
+  const it = id ? items.find(i => i.id === id) : null;
+  $('#dlg-title').textContent = it ? 'Изменить' : 'Новое желание';
+  $('#f-title').value = it?.title ?? '';
+  $('#f-price').value = it?.price ?? '';
+  $('#f-url').value = it?.url ?? '';
+  $('#f-image').value = it?.image ?? '';
+  $('#f-note').value = it?.note ?? '';
+  $('#f-priority').value = String(it?.priority ?? 1);
+  $('#dlg').showModal();
+}
+
+$('#dlg').addEventListener('close', async () => {
+  if($('#dlg').returnValue !== 'save') return;
+  const data = {
+    title: $('#f-title').value.trim() || 'Без названия',
+    price: toNum($('#f-price').value),
+    url: $('#f-url').value.trim(),
+    image: $('#f-image').value.trim(),
+    note: $('#f-note').value.trim(),
+    priority: +$('#f-priority').value
+  };
+  if(editId){
+    const it = items.find(i => i.id === editId);
+    if(it.first == null && data.price) it.first = data.price;
+    Object.assign(it, data);
+  }else{
+    items.unshift({ id:uid(), ...data, first:data.price, bought:false, created:Date.now(), checked:null });
+  }
+  editId = null;
+  render(); await save();
+});
+
+/* ============================================================
+   События
+   ============================================================ */
+$('#btn-add').onclick = () => { const v = $('#url').value.trim(); if(v) addByUrl(v); else $('#url').focus(); };
+$('#url').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); $('#btn-add').click(); } });
+$('#btn-manual').onclick = () => openDialog(null);
+$('#btn-refresh').onclick = refreshAll;
+
+$('#grid').addEventListener('click', async e => {
+  const btn = e.target.closest('[data-act]'); if(!btn) return;
+  const id = btn.closest('.card').dataset.id;
+  const it = items.find(i => i.id === id); if(!it) return;
+  const act = btn.dataset.act;
+
+  if(act === 'bought'){ it.bought = !it.bought; render(); await save(); }
+  if(act === 'edit'){ openDialog(id); }
+  if(act === 'del'){ items = items.filter(i => i.id !== id); render(); await save(); toast('Удалено'); }
+  if(act === 'refresh'){
+    markBusy(id, true);
+    const d = await fetchProduct(it.url);
+    markBusy(id, false);
+    if(d?.price){
+      if(it.first == null) it.first = it.price ?? d.price;
+      const was = it.price; it.price = d.price; it.checked = Date.now();
+      if(d.image && !it.image) it.image = d.image;
+      render(); await save();
+      toast(was === d.price ? 'Цена та же' : `Теперь ${fmt(d.price)} ${settings.currency}`);
+    }else toast('Цену получить не вышло');
+  }
+});
+
+$$('.chip').forEach(c => c.onclick = () => {
+  filter = c.dataset.filter;
+  $$('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === c)));
+  render();
+});
+$('#sort').onchange = e => { sortBy = e.target.value; render(); };
+
+$('#btn-menu').onclick = () => { $('#s-cur').value = settings.currency; $('#s-api').value = settings.api; $('#dlg2').showModal(); };
+$('#dlg2').addEventListener('close', async () => {
+  const v = $('#dlg2').returnValue;
+  if(v === 'save'){
+    settings.currency = $('#s-cur').value.trim() || '₽';
+    settings.api = $('#s-api').value.trim();
+    await store.set(KEY_SET, settings); render(); toast('Сохранено');
+  }
+  if(v === 'export'){
+    const blob = new Blob([JSON.stringify(items, null, 2)], { type:'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `wishlist-${new Date().toISOString().slice(0,10)}.json`;
+    a.click(); URL.revokeObjectURL(a.href);
+  }
+  if(v === 'import') $('#file').click();
+  if(v === 'clear' && confirm('Удалить все желания без возможности вернуть?')){
+    items = []; render(); await save(); toast('Список пуст');
+  }
+});
+$('#file').onchange = async e => {
+  const f = e.target.files[0]; if(!f) return;
+  try{
+    const arr = JSON.parse(await f.text());
+    if(!Array.isArray(arr)) throw 0;
+    const ids = new Set(items.map(i => i.id));
+    items = [...arr.filter(i => i && !ids.has(i.id)), ...items];
+    render(); await save(); toast(`Добавлено: ${arr.length}`);
+  }catch(err){ toast('Файл не читается'); }
+  e.target.value = '';
+};
+
+const b64 = {
+  enc: obj => btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(obj)))).replace(/\+/g,'-').replace(/\//g,'_'),
+  dec: str => JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(str.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0))))
+};
+$('#btn-share').onclick = async () => {
+  const light = items.filter(i => !i.bought).map(i => ({
+    id:i.id, title:i.title, price:i.price, url:i.url, image:i.image, note:i.note, priority:i.priority, created:i.created
+  }));
+  if(!light.length){ toast('Сначала добавь желания'); return; }
+  const link = location.origin + location.pathname + '#w=' + b64.enc(light);
+  try{ await navigator.clipboard.writeText(link); toast('Ссылка скопирована'); }
+  catch(e){ prompt('Скопируй ссылку:', link); }
+};
+
+/* ============================================================
+   Старт
+   ============================================================ */
+(async function init(){
+  settings = { ...settings, ...(await store.get(KEY_SET, {})) };
+  items = await store.get(KEY_ITEMS, []);
+
+  const m = location.hash.match(/#w=(.+)$/);
+  if(m){
+    try{
+      const shared = b64.dec(m[1]);
+      readonly = true;
+      items = shared.map(i => ({ ...i, bought:false, first:i.price }));
+      $('#banner').classList.add('on');
+      $('#banner-text').textContent = 'Это чужой вишлист, открыт только для просмотра.';
+      $('#btn-refresh').style.display = $('#btn-share').style.display = 'none';
+      $('.adder').style.display = 'none';
+      $('#banner-import').onclick = async () => {
+        readonly = false;
+        const mine = await store.get(KEY_ITEMS, []);
+        const ids = new Set(mine.map(i => i.id));
+        items = [...items.filter(i => !ids.has(i.id)), ...mine];
+        await save();
+        location.hash = ''; location.reload();
+      };
+      $('#banner-close').onclick = () => { location.hash = ''; location.reload(); };
+    }catch(e){ toast('Ссылка битая'); }
+  }
+  render();
+
+  document.addEventListener('paste', e => {
+    if(readonly || document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+    const t = (e.clipboardData.getData('text') || '').trim();
+    if(/^https?:\/\/\S+$/i.test(t)){ e.preventDefault(); addByUrl(t); }
+  });
+})();
+</script>
+</body>
+</html>
