@@ -312,7 +312,7 @@
 
   <footer>
     Жёлтая полоска — очень хочу, синяя — хочу, серая — когда-нибудь, зелёная — уже куплено.
-    Данные лежат только в этом браузере: меняешь устройство — сначала скачай JSON.
+    Название, публичная цена и картинка подтягиваются через сервер сайта. Данные вишлиста остаются только в этом браузере.
   </footer>
 </div>
 
@@ -353,8 +353,7 @@
         <input class="in" id="s-api" type="url" placeholder="https://твой-проект.vercel.app/api/price">
       </label>
       <div class="tip">
-        Без него цены читаются через публичные прокси — иногда магазин их блокирует.
-        Свой эндпоинт на Vercel работает стабильнее, файл лежит в проекте.
+        У сайта уже есть встроенный сервис импорта. Свой эндпоинт можно указать как дополнительный резервный источник.
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
         <button class="btn" id="s-export" value="export" formnovalidate>Скачать JSON</button>
@@ -411,6 +410,11 @@ const fmt = n => Number(n||0).toLocaleString('ru-RU',{maximumFractionDigits:0});
 
 function host(url){
   try{ return new URL(url).hostname.replace(/^www\./,''); }catch(e){ return ''; }
+}
+function extractUrl(value){
+  const raw = String(value || '').trim();
+  const match = raw.match(/https?:\/\/[^\s<>"']+/i);
+  return (match ? match[0] : raw).replace(/[),.;!?]+$/g, '');
 }
 function toNum(v){
   if(v == null) return null;
@@ -537,6 +541,34 @@ async function fromWB(url){
 
 async function fetchProduct(url){
   const h = host(url);
+
+  /* Основной путь: сервер сайта. Он не зависит от CORS браузера и умеет
+     отдельно разбирать Ozon, Avito, AliExpress и Wildberries. */
+  if(location.protocol === 'http:' || location.protocol === 'https:'){
+    try{
+      const ctrl = new AbortController();
+      const timer = setTimeout(()=>ctrl.abort(), 22000);
+      const res = await fetch('/api/product?url=' + encodeURIComponent(url), {
+        signal:ctrl.signal,
+        headers:{ 'Accept':'application/json' }
+      });
+      clearTimeout(timer);
+      const data = await res.json().catch(()=>null);
+      if(res.ok && data?.ok && (data.price || data.title || data.image)){
+        return {
+          title:data.title || null,
+          price:toNum(data.price),
+          image:data.image || null,
+          url:data.url || url,
+          shop:data.shop || h,
+          currency:data.currency || null
+        };
+      }
+      if(!res.ok) console.warn('Импорт товара:', data?.error || `HTTP ${res.status}`);
+    }catch(e){}
+  }
+
+  /* Резерв для скачанного HTML и старых хостингов. */
   if(/wildberries\.ru$/.test(h)){
     const wb = await fromWB(url);
     if(wb && (wb.price || wb.title)) return wb;
@@ -564,7 +596,7 @@ async function fetchProduct(url){
 async function save(){ if(!readonly) await store.set(KEY_ITEMS, items); }
 
 async function addByUrl(url){
-  url = url.trim();
+  url = extractUrl(url);
   if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
   try{ new URL(url); }catch(e){ hint('Это не похоже на ссылку', true); return; }
 
@@ -582,13 +614,14 @@ async function addByUrl(url){
   const live = items.find(i => i.id === item.id);
   if(!live) return;
   if(data){
+    if(data.url) live.url = data.url;
     if(data.title) live.title = data.title;
     if(data.image) live.image = data.image;
     if(data.price){ live.price = data.price; live.first = data.price; }
     live.checked = Date.now();
-    hint(data.price ? `Готово: ${fmt(data.price)} ${settings.currency}` : 'Название взял, цену магазин не отдал — впиши руками');
+    hint(data.price ? `Готово: ${fmt(data.price)} ${settings.currency}` : 'Товар нашёл, но магазин скрыл публичную цену — её можно вписать вручную');
   }else{
-    hint('Магазин закрылся от парсера. Впиши название и цену руками', true);
+    hint('Магазин не отдал публичную карточку. Название и цену можно вписать вручную', true);
   }
   render(); await save();
   if(!data || !data.price) openDialog(live.id);
@@ -604,6 +637,7 @@ async function refreshAll(){
     const data = await fetchProduct(it.url);
     markBusy(it.id, false);
     if(data && data.price){
+      if(data.url) it.url = data.url;
       if(it.first == null) it.first = it.price ?? data.price;
       if(it.price !== data.price) changed++;
       it.price = data.price;
@@ -769,6 +803,7 @@ $('#grid').addEventListener('click', async e => {
     const d = await fetchProduct(it.url);
     markBusy(id, false);
     if(d?.price){
+      if(d.url) it.url = d.url;
       if(it.first == null) it.first = it.price ?? d.price;
       const was = it.price; it.price = d.price; it.checked = Date.now();
       if(d.image && !it.image) it.image = d.image;
